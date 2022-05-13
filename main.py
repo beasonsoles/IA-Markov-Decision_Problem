@@ -6,6 +6,8 @@ pandas.options.display.max_columns = None
 
 # ------------- variables -------------
 df = pandas.read_csv("Data.csv", sep=";")
+# convert the dataframe with our data to a list
+data_list = df.to_numpy()
 # these three constants can be changed by the user
 NUMBER_OF_ROADS = 3
 TRAFFIC_LEVELS = ["H", "L"]
@@ -16,6 +18,7 @@ STATES = ["HHH", "HHL", "HLH", "HLL", "LHH", "LHL", "LLH", "LLL"]
 states_with_direction = {}
 # probabilities will be a matrix that stores all the probabilities
 probabilities = []
+
 
 # ------------- functions -------------
 
@@ -60,6 +63,56 @@ def generate_states(l): # RECURSION FUNCTION FOR THE FOR LOOPS
         # print(STATES)
 
 
+def get_probability(s, next_s, a):
+    probabilities[s][next_s] = finish this
+
+
+def cost(n_action, o_action):
+    try:
+        if ACTIONS[n_action] == ACTIONS[o_action]:
+            return 1
+        elif ACTIONS[n_action] != ACTIONS[o_action]:
+            return 2
+    except IndexError:
+        return 0
+
+
+def bellman_equation(action_index, old_values):
+    value = 0
+    for state in range(len(STATES)):
+        for next_state in range(len(STATES)):
+            value = (cost(action_index, action_index - 1) +
+                     sum(get_probability(state, next_state, ACTIONS[action_index])*old_values.get(STATES[next_state])
+                         for next_state in range(len(STATES))))
+    return value
+
+
+def value_iteration():
+    values = {state: 0 for state in STATES}
+    optimal_policy = {state: 0 for state in STATES}
+    iteration = []
+    counter = 0
+    convergence = False
+    while not convergence:
+        old_values = values.copy()
+        for s in range(len(STATES)):
+            state = STATES[s]
+            policy = {action: 0 for action in ACTIONS}
+            for action_index in range(len(ACTIONS)):
+                action = ACTIONS[action_index]
+                policy[action] = bellman_equation(action_index, old_values)
+                values[state] = max(policy.values())
+                optimal_policy[state] = action
+            print("values", values)
+        for state in STATES:
+            if old_values[state] == values[state]:
+                break
+                # convergence = True
+        counter += 1
+        iteration.append(counter)
+    return values, optimal_policy, iteration
+
+
 # loop to create the keys of the states_with_direction dictionary and assign it a counter of 0
 # these keys will have the form: levellevellevel-action
 for state in STATES:
@@ -70,8 +123,8 @@ for row in range(len(states_with_direction)):
     probabilities.append([])
     for col in range(len(STATES)):
         probabilities[row].append(0)
-# store the data and the states and direction in a list
-data_list = df.to_numpy()
+# store the states and direction in a list
+
 states_and_dir = list(states_with_direction.keys())
 # calculate how many times each levellevellevel-action key appears in the data
 
@@ -95,9 +148,14 @@ for row in range(len(states_and_dir)):
         try:
             previous = probabilities[row][column]
             probability = previous / states_with_direction.get(states_and_dir[row])
-            # probabilities[states_and_dir.index(row)][STATES.index(state)] = round(probability, 4)
             probabilities[row][column] = probability
         except ZeroDivisionError:
             probabilities[row][column] = 0
 pct = pandas.DataFrame(probabilities, index=states_with_direction, columns=STATES)
 print(pct)
+
+result = value_iteration()
+values = pandas.DataFrame(result[0], index=STATES, columns=result[2])
+print("final values", values)
+optimal_policy = pandas.DataFrame(result[1], index=STATES)
+print("opt policy", optimal_policy)
