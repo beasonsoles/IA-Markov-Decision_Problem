@@ -12,6 +12,7 @@ class MDP:
         self.df = pandas.read_csv(input_file, sep=";")
         # convert the dataframe with our data to a list
         self.data_list = self.df.to_numpy()
+        self.unique_lines = []
         # these three constants can be changed by the user
         self.NUMBER_OF_ROADS = 3
         self.TRAFFIC_LEVELS = ["H", "L"]
@@ -26,6 +27,10 @@ class MDP:
         # self.data_actions = []
 
     # ------------- functions -------------
+    def get_unique_lines(self):
+        df_unique = self.df.drop_duplicates()
+        self.unique_lines = df_unique.to_numpy()
+
     def simplify_data(self, line):
         """Function that keeps the first letter of the characters in the entered row.
         Thus, we ease working with the data. It returns two strings: a string with the initial state
@@ -108,7 +113,6 @@ class MDP:
                 except ZeroDivisionError:
                     self.probabilities[row][column] = 0
         pct = pandas.DataFrame(self.probabilities, index=states_and_dir, columns=self.STATES)
-        print(pct)
         return pct
 
     def cost(self, n_action):
@@ -124,59 +128,71 @@ class MDP:
             return 0
 
     def bellman_equation(self, init_state, action, old_values, pct):
-        state = init_state+"-"+action
         # print("old value", old_values.get(self.STATES["HHH"]))
+        # optimal_action = {action: 0 for action in self.ACTIONS}
+        # optimal_action[action] = self.cost(action)
         value = self.cost(action)
         for next_state in self.STATES:
-            value += pct.loc[state, next_state] * old_values.get(next_state)
+            state = init_state + "-" + action
+            value += float(pct.loc[state, next_state] * old_values[next_state])
+        if (action == 'W' or action == 'E') and init_state == 'HHH':
+            print(old_values)
+            print('uwu', action, value)
+
         return value
 
     def value_iteration(self):
         pct = self.calculate_probabilities()
+        print(pct)
         values = {state: 0 for state in self.STATES}
-        old_values = {}
         optimal_policy = {state: "" for state in self.STATES}
-        optimal_action = None
-        iteration = []
-        iteration_num = 0
-        counter = 0
-        convergence = False
-        #while not all(old_values[state] == values[state] for state in self.STATES):
-        while not convergence:
-            old_values = values.copy()
-            for s_idx, s in enumerate(self.STATES):
-                optimal_action = None
-                curr_value = float('inf')
-                for line in self.data_list:
-                    new_line = self.simplify_data(line)
-                    # example: if "HHH" in "HHH-E"
-                    # if s in new_line[0]:
-                    # the action is the last character of the first result obtained from simplify_data
-                    action = new_line[0][-1]
-                    # policy = {action: 0 for action in self.ACTIONS}
-                    bellman_result = self.bellman_equation(s, action, old_values, pct)
-                    self.prev_action = action # move at the end to the if or the else
-                    if curr_value > bellman_result:
-                        curr_value = bellman_result
-                        optimal_action = action
-                    else:
-                        values[s] = old_values[s]
-                        counter += 1
-                optimal_policy[s] = optimal_action
-                values[s] = curr_value
-                print("%s value: %f" % (s, values[s]))
-            print("hi")
-            if counter == len(self.STATES):
-            # if all(old_values[state] == values[state] for state in self.STATES):
-                convergence = True
-            iteration_num += 1
-            iteration.append(iteration_num)
-        return values, optimal_policy, iteration
+        old_values = {}
+        while old_values != values:
+            # print(old_values)
+            # print(values)
+            for i in values.keys():
+                old_values[i] = values[i]
+            for state in self.STATES:
+                optimal_action = {}
+                for action in self.ACTIONS:
+                    optimal_action[action] = self.bellman_equation(state, action, old_values, pct)
+                values[state] = float(min(list(optimal_action.values())))
+                action_index = list(optimal_action.values()).index(values[state])
+                action = list(optimal_action.keys())[action_index]
+                if state == 'HHH':
+                    print(values[state], action)
+                self.prev_action = action
+                optimal_policy[state] = self.prev_action
+                #     optimal_policy[initial_state] = self.prev_action
+                    # value = min(optimal_action.values())
+                    # # print("value", value)
+                    # action_index = list(optimal_action.values()).index(value)
+                    # action = list(optimal_action.keys())[action_index]
+                    # print(optimal_action)
+                # print("old", old_values)
+                # new_line = self.simplify_data(line)
+                # print("6565", new_line)
+                # example: if "HHH" in "HHH-E"
+                # if s in new_line[0]:
+                # the action is the last character of the first result obtained from simplify_data
+                # result = line.split("-")
+                # initial_state = result[0]
+                # for s_idx, s in enumerate(self.STATES):
+                # policy = {action: 0 for action in self.ACTIONS}
+
+                #     print(old_values,values)
+                #     # print("bellman", values[initial_state])
+                #     self.prev_action = action
+                #     optimal_policy[initial_state] = self.prev_action
+
+                # for s in self.STATES:
+                #     print("%s value: %f" % (s, values[s]))
+                # if old_values == values:
+                #     convergence = True
+        return optimal_policy
 
 
 mdp = MDP("Data.csv")
 result = mdp.value_iteration()
-values = pandas.DataFrame(result[0], index=mdp.STATES, columns=result[2])
-print("values", values)
-optimal_policy = pandas.DataFrame(result[1], index=mdp.STATES)
-print("optimal policy", optimal_policy)
+# optimal_policy = pandas.DataFrame(result, index=mdp.STATES)
+print("optimal policy", list(result.values()))
