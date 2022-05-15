@@ -1,6 +1,5 @@
 """Main module docstring"""
 import pandas
-import numpy
 
 # ------------- reset the size of the terminal -------------
 pandas.options.display.max_columns = None
@@ -9,29 +8,25 @@ pandas.options.display.max_columns = None
 class MDP:
 
     def __init__(self, input_file, levels_num):
-        # ------------- variables -------------
         self.df = pandas.read_csv(input_file, sep=";")
         # convert the dataframe with our data to a list
         self.data_list = self.df.to_numpy()
         self.levels_num = levels_num
-        # these three constants can be changed by the user
-        # self.ACTIONS = ["E", "N", "W"]
         self.actions = []
         self.states = []
-        # self.STATES = ["HHH", "HHL", "HLH", "HLL", "LHH", "LHL", "LLH", "LLL"]
-        self.goal = ["LLL"]
+        self.goal = ["L"*self.levels_num]
         self.states_with_direction = {}
         # probabilities will be a matrix that stores all the probabilities
         self.probabilities = []
         self.pct = None
         self.optimal_policy = {}
 
-    # ------------- methods -------------
     @staticmethod
     def simplify_data(line):
-        """Function that keeps the first letter of the characters in the entered row.
-        Thus, we ease working with the data. It returns two strings: a string with the initial state
-        and the action, and another string with the final state"""
+        """Method that keeps the first letter of the characters in the entered row
+        to ease working with the data. It returns two strings:
+        a string with the initial state and the action,
+        and another string with the final state"""
         action_found = False
         initial_state_and_action = ""
         final_state = ""
@@ -53,7 +48,8 @@ class MDP:
                     final_state += "L"
         return initial_state_and_action, final_state
 
-    def generate_states(self):
+    def generate_states_and_actions(self):
+        """Method that generates the lists self.states and self.actions and sorts them"""
         df_unique = self.df.drop_duplicates()
         unique_lines = df_unique.to_numpy()
         for line in unique_lines:
@@ -71,18 +67,18 @@ class MDP:
         self.actions.sort()
 
     def fill_probability_matrix(self):
+        """Method that fills the probability matrix with 0s"""
         probabilities = []
-        # fill the probability matrix with 0
         for row in range(len(self.states_with_direction)):
             probabilities.append([])
             for col in range(len(self.states)):
                 probabilities[row].append(0)
         self.probabilities = probabilities
 
-    # loop to create the keys of the states_with_direction dictionary and assign it a counter of 0
-    # these keys will have the form: levellevellevel-action
     def create_states_with_direction(self):
-        self.generate_states()
+        """This method creates the keys of the states_with_direction dictionary and assigns it a counter of 0.
+        These keys will have the form: levellevellevel-action"""
+        self.generate_states_and_actions()
         for state in self.states:
             for action in self.actions:
                 self.states_with_direction[state + "-" + action] = 0
@@ -91,7 +87,7 @@ class MDP:
         return states_and_dir
 
     def count_occurrences(self):
-        # calculate how many times each levellevellevel-action key appears in the data
+        """This method calculates how many times each levellevellevel-action key appears in the data"""
         states_and_dir = self.create_states_with_direction()
         self.fill_probability_matrix()
         for line in self.data_list:
@@ -110,7 +106,7 @@ class MDP:
         return states_and_dir
 
     def calculate_probabilities(self):
-        # calculate the probabilities
+        """This method calculates the probabilities"""
         states_and_dir = self.count_occurrences()
         for idx_row, row in enumerate(states_and_dir):
             for idx_col in range(len(self.states)):
@@ -123,6 +119,7 @@ class MDP:
         self.pct = pandas.DataFrame(self.probabilities, index=states_and_dir, columns=self.states)
 
     def cost(self, state, n_action):
+        """This method returns the cost of performing an action depending on the action taken before"""
         try:
             if n_action == self.optimal_policy[state]:
                 return 1
@@ -132,6 +129,7 @@ class MDP:
             return 1
 
     def bellman_equation(self, init_state, action, old_values):
+        """This method returns the value obtained by using the Bellman Equation"""
         if init_state in self.goal:
             return 0
         value = self.cost(init_state, action)
@@ -141,8 +139,7 @@ class MDP:
         return value
 
     def value_iteration(self):
-        # self.fill_probability_matrix()
-        # print(self.probabilities)
+        """This method performs iterations of the values of the states until two of them converge"""
         self.calculate_probabilities()
         values = {state: 0 for state in self.states}
         old_values = {}
@@ -152,6 +149,7 @@ class MDP:
                 minimum = float('inf')
                 for action in self.actions:
                     bellman_result = self.bellman_equation(state, action, old_values)
+                    # we save the minimum value
                     if bellman_result < minimum:
                         minimum = bellman_result
                         self.optimal_policy[state] = action
@@ -162,9 +160,8 @@ class MDP:
 
 
 if __name__ == '__main__':
-    text = "Welcome to the traffic management program. " \
-        "Please enter the number of levels that will represent the traffic flow."
-    print(text)
+    print("Welcome to the traffic management program. "
+          "Please enter the number of levels that will represent the traffic flow.")
     levels = int(input("Enter the number of streets: \n"))
     mdp = MDP("Data.csv", levels)
     optimal_policy = mdp.value_iteration()
