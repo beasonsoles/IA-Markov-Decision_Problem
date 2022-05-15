@@ -23,7 +23,7 @@ class MDP:
         self.states_with_direction = {}
         # probabilities will be a matrix that stores all the probabilities
         self.probabilities = []
-
+        self.pct = None
         self.optimal_policy = {}
 
     # ------------- methods -------------
@@ -118,8 +118,7 @@ class MDP:
                     self.probabilities[idx_row][idx_col] = probability
                 except ZeroDivisionError:
                     self.probabilities[idx_row][idx_col] = 0
-        pct = pandas.DataFrame(self.probabilities, index=states_and_dir, columns=self.states)
-        return pct
+        self.pct = pandas.DataFrame(self.probabilities, index=states_and_dir, columns=self.states)
 
     def cost(self, state, n_action):
         try:
@@ -130,17 +129,17 @@ class MDP:
         except KeyError:
             return 1
 
-    def bellman_equation(self, init_state, action, old_values, pct):
+    def bellman_equation(self, init_state, action, old_values):
         if init_state in self.goal:
             return 0
         value = self.cost(init_state, action)
         for next_state in self.states:
             state = init_state + "-" + action
-            value += pct.loc[state, next_state] * old_values[next_state]
+            value += self.pct.loc[state, next_state] * old_values[next_state]
         return value
 
     def value_iteration(self):
-        pct = self.calculate_probabilities()
+        self.calculate_probabilities()
         values = {state: 0 for state in self.states}
         old_values = {}
         while old_values != values:
@@ -148,7 +147,7 @@ class MDP:
             for state in self.states:
                 minimum = float('inf')
                 for action in self.actions:
-                    bellman_result = self.bellman_equation(state, action, old_values, pct)
+                    bellman_result = self.bellman_equation(state, action, old_values)
                     if bellman_result < minimum:
                         minimum = bellman_result
                         self.optimal_policy[state] = action
