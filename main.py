@@ -18,13 +18,14 @@ class MDP:
         self.TRAFFIC_LEVELS = ["H", "L"]
         self.ACTIONS = ["E", "N", "W"]
         self.STATES = ["HHH", "HHL", "HLH", "HLL", "LHH", "LHL", "LLH", "LLL"]
+        self.GOAL_STATES = ["LLL"]
         self.states_with_direction = {}
         # probabilities will be a matrix that stores all the probabilities
         self.probabilities = []
-        self.prev_action = {}
+        self.prev_action = {state: "undefined" for state in self.STATES}
 
     # ------------- functions -------------
-    def get_unique_lines(self):
+    def generate_states(self):
         df_unique = self.df.drop_duplicates()
         self.unique_lines = df_unique.to_numpy()
 
@@ -131,6 +132,8 @@ class MDP:
                     if bellman_result < minimum:
                         minimum = bellman_result
                         self.prev_action[state] = action
+                if state in self.GOAL_STATES:
+                    self.prev_action[state] = "undefined"
                 values[state] = minimum
         return self.prev_action
 
