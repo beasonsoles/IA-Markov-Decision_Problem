@@ -71,11 +71,13 @@ class MDP:
         self.actions.sort()
 
     def fill_probability_matrix(self):
+        probabilities = []
         # fill the probability matrix with 0
         for row in range(len(self.states_with_direction)):
-            self.probabilities.append([])
+            probabilities.append([])
             for col in range(len(self.states)):
-                self.probabilities[row].append(0)
+                probabilities[row].append(0)
+        self.probabilities = probabilities
 
     # loop to create the keys of the states_with_direction dictionary and assign it a counter of 0
     # these keys will have the form: levellevellevel-action
@@ -84,7 +86,6 @@ class MDP:
         for state in self.states:
             for action in self.actions:
                 self.states_with_direction[state + "-" + action] = 0
-        self.fill_probability_matrix()
         # store the states and direction in a list
         states_and_dir = list(self.states_with_direction.keys())
         return states_and_dir
@@ -92,6 +93,7 @@ class MDP:
     def count_occurrences(self):
         # calculate how many times each levellevellevel-action key appears in the data
         states_and_dir = self.create_states_with_direction()
+        self.fill_probability_matrix()
         for line in self.data_list:
             new_line = self.simplify_data(line)
             # the two following variables will store the initial state and action (e.g. HHL-E)
@@ -139,6 +141,8 @@ class MDP:
         return value
 
     def value_iteration(self):
+        # self.fill_probability_matrix()
+        # print(self.probabilities)
         self.calculate_probabilities()
         values = {state: 0 for state in self.states}
         old_values = {}
