@@ -15,16 +15,17 @@ class MDP:
         self.levels_num = levels_num
         # these three constants can be changed by the user
         # self.ACTIONS = ["E", "N", "W"]
-        self.ACTIONS = []
-        self.STATES = []
+        self.actions = []
+        self.states = []
         # self.STATES = ["HHH", "HHL", "HLH", "HLL", "LHH", "LHL", "LLH", "LLL"]
-        self.GOAL = ["LLL"]
+        self.goal = ["LLL"]
         self.states_with_direction = {}
         # probabilities will be a matrix that stores all the probabilities
         self.probabilities = []
-        self.prev_action = {}
+        self.optimal_policy = {}
 
     # ------------- methods -------------
+    @staticmethod
     def simplify_data(self, line):
         """Function that keeps the first letter of the characters in the entered row.
         Thus, we ease working with the data. It returns two strings: a string with the initial state
@@ -58,25 +59,25 @@ class MDP:
             result = state_and_dir.split("-")
             state = result[0]
             action = result[1]
-            if final_state not in self.STATES:
-                self.STATES.append(final_state)
-            if state not in self.STATES:
-                self.STATES.append(state)
-            if action not in self.ACTIONS:
-                self.ACTIONS.append(action)
-        self.STATES.sort()
-        self.ACTIONS.sort()
+            if final_state not in self.states:
+                self.states.append(final_state)
+            if state not in self.states:
+                self.states.append(state)
+            if action not in self.actions:
+                self.actions.append(action)
+        self.states.sort()
+        self.actions.sort()
 
     # loop to create the keys of the states_with_direction dictionary and assign it a counter of 0
     # these keys will have the form: levellevellevel-action
     def create_states_with_direction(self):
-        for state in self.STATES:
-            for action in self.ACTIONS:
+        for state in self.states:
+            for action in self.actions:
                 self.states_with_direction[state + "-" + action] = 0
         # fill the probability matrix with 0
         for row in range(len(self.states_with_direction)):
             self.probabilities.append([])
-            for col in range(len(self.STATES)):
+            for col in range(len(self.states)):
                 self.probabilities[row].append(0)
         # store the states and direction in a list
         states_and_dir = list(self.states_with_direction.keys())
@@ -95,39 +96,39 @@ class MDP:
                 if i_state_and_action == row:
                     self.states_with_direction[row] += 1
                 # calculate the frequency of each complete line
-                for state in self.STATES:
+                for state in self.states:
                     if i_state_and_action == row and f_state == state:
-                        self.probabilities[states_and_dir.index(row)][self.STATES.index(state)] += 1
+                        self.probabilities[states_and_dir.index(row)][self.states.index(state)] += 1
         return states_and_dir
 
     def calculate_probabilities(self):
         # calculate the probabilities
         states_and_dir = self.count_occurrences()
-        for row in range(len(states_and_dir)):
-            for column in range(len(self.STATES)):
+        for idx_row, row in enumerate(states_and_dir):
+            for idx_col in range(len(self.states)):
                 try:
-                    previous = self.probabilities[row][column]
-                    probability = previous / self.states_with_direction.get(states_and_dir[row])
-                    self.probabilities[row][column] = probability
+                    previous = self.probabilities[idx_row][idx_col]
+                    probability = previous / self.states_with_direction[row]
+                    self.probabilities[idx_row][idx_col] = probability
                 except ZeroDivisionError:
-                    self.probabilities[row][column] = 0
-        pct = pandas.DataFrame(self.probabilities, index=states_and_dir, columns=self.STATES)
+                    self.probabilities[idx_row][idx_col] = 0
+        pct = pandas.DataFrame(self.probabilities, index=states_and_dir, columns=self.states)
         return pct
 
     def cost(self, state, n_action):
         try:
-            if n_action == self.prev_action[state]:
+            if n_action == self.optimal_policy[state]:
                 return 1
-            elif n_action != self.prev_action[state]:
+            if n_action != self.optimal_policy[state]:
                 return 2
         except KeyError:
             return 1
 
     def bellman_equation(self, init_state, action, old_values, pct):
-        if init_state in self.GOAL:
+        if init_state in self.goal:
             return 0
         value = self.cost(init_state, action)
-        for next_state in self.STATES:
+        for next_state in self.states:
             state = init_state + "-" + action
             value += pct.loc[state, next_state] * old_values[next_state]
         return value
@@ -135,30 +136,30 @@ class MDP:
     def value_iteration(self):
         self.generate_states()
         pct = self.calculate_probabilities()
-        values = {state: 0 for state in self.STATES}
+        values = {state: 0 for state in self.states}
         old_values = {}
         while old_values != values:
             old_values = values.copy()
-            for state in self.STATES:
+            for state in self.states:
                 minimum = float('inf')
-                for action in self.ACTIONS:
+                for action in self.actions:
                     bellman_result = self.bellman_equation(state, action, old_values, pct)
                     if bellman_result < minimum:
                         minimum = bellman_result
-                        self.prev_action[state] = action
-                if state in self.GOAL:
-                    self.prev_action[state] = "undefined"
+                        self.optimal_policy[state] = action
+                if state in self.goal:
+                    self.optimal_policy[state] = "undefined"
                 values[state] = minimum
-        return self.prev_action
+        return self.optimal_policy
 
 
-text = "Welcome to the traffic management program. " \
-    "Please enter the number of levels that will represent the traffic flow."
-print(text)
-levels = int(input("Enter the number of streets: \n"))
-mdp = MDP("Data.csv", levels)
-# mdp.generate_states()
-optimal_policy = mdp.value_iteration()
-print("OPTIMAL POLICY:")
-for key in optimal_policy.keys():
-    print(key, "--->", optimal_policy[key])
+if __name__ == '__main__':
+    text = "Welcome to the traffic management program. " \
+        "Please enter the number of levels that will represent the traffic flow."
+    print(text)
+    levels = int(input("Enter the number of streets: \n"))
+    mdp = MDP("Data.csv", levels)
+    optimal_policy = mdp.value_iteration()
+    print("OPTIMAL POLICY:")
+    for key in optimal_policy.keys():
+        print(key, "--->", optimal_policy[key])
