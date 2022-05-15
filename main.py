@@ -16,14 +16,14 @@ class MDP:
         # these three constants can be changed by the user
         self.NUMBER_OF_ROADS = 3
         self.TRAFFIC_LEVELS = ["H", "L"]
-        self.ACTIONS = ["N", "E", "W"]
+        self.ACTIONS = ["E", "N", "W"]
         self.STATES = ["HHH", "HHL", "HLH", "HLL", "LHH", "LHL", "LLH", "LLL"]
         # generate the states
         # STATES = []
         self.states_with_direction = {}
         # probabilities will be a matrix that stores all the probabilities
         self.probabilities = []
-        self.prev_action = None
+        # self.prev_action = {}
         # self.data_actions = []
 
     # ------------- functions -------------
@@ -112,14 +112,13 @@ class MDP:
                     self.probabilities[row][column] = probability
                 except ZeroDivisionError:
                     self.probabilities[row][column] = 0
+            # print("ihs", sum(self.probabilities[row]) == 1)
         pct = pandas.DataFrame(self.probabilities, index=states_and_dir, columns=self.STATES)
+        # print(pct)
         return pct
 
     def cost(self, n_action):
         try:
-            # print("l",line_num)
-            # o_action = self.data_actions[line_num - 1]
-            # n_action = self.data_actions[line_num]
             if n_action == self.prev_action or self.prev_action is None:
                 return 1
             elif n_action != self.prev_action:
@@ -132,63 +131,42 @@ class MDP:
         # optimal_action = {action: 0 for action in self.ACTIONS}
         # optimal_action[action] = self.cost(action)
         value = self.cost(action)
+        count = 0
         for next_state in self.STATES:
             state = init_state + "-" + action
-            value += float(pct.loc[state, next_state] * old_values[next_state])
-        if (action == 'W' or action == 'E') and init_state == 'HHH':
-            print(old_values)
-            print('uwu', action, value)
-
+            count += pct.loc[state, next_state]
+            value += pct.loc[state, next_state] * old_values[next_state]
+        if init_state == 'HHH':
+            print("value", value)
+        # if (action == 'W' or action == 'E') and init_state == 'HHH':
+            # print(old_values)
+            # print('uwu', action, value)
+        # print(init_state, action, "OK", count == 1)
         return value
 
     def value_iteration(self):
         pct = self.calculate_probabilities()
-        print(pct)
+        action = ""
         values = {state: 0 for state in self.STATES}
         optimal_policy = {state: "" for state in self.STATES}
         old_values = {}
         while old_values != values:
-            # print(old_values)
-            # print(values)
             for i in values.keys():
                 old_values[i] = values[i]
             for state in self.STATES:
+                self.prev_action = None
                 optimal_action = {}
+                minimum = float('inf')
                 for action in self.ACTIONS:
-                    optimal_action[action] = self.bellman_equation(state, action, old_values, pct)
-                values[state] = float(min(list(optimal_action.values())))
+                    bellman = self.bellman_equation(state, action, old_values, pct)
+                    if bellman < minimum:
+                        minimum = bellman
+                        optimal_action[action] = minimum
+                        self.prev_action = action
+                values[state] = minimum
                 action_index = list(optimal_action.values()).index(values[state])
                 action = list(optimal_action.keys())[action_index]
-                if state == 'HHH':
-                    print(values[state], action)
-                self.prev_action = action
                 optimal_policy[state] = self.prev_action
-                #     optimal_policy[initial_state] = self.prev_action
-                    # value = min(optimal_action.values())
-                    # # print("value", value)
-                    # action_index = list(optimal_action.values()).index(value)
-                    # action = list(optimal_action.keys())[action_index]
-                    # print(optimal_action)
-                # print("old", old_values)
-                # new_line = self.simplify_data(line)
-                # print("6565", new_line)
-                # example: if "HHH" in "HHH-E"
-                # if s in new_line[0]:
-                # the action is the last character of the first result obtained from simplify_data
-                # result = line.split("-")
-                # initial_state = result[0]
-                # for s_idx, s in enumerate(self.STATES):
-                # policy = {action: 0 for action in self.ACTIONS}
-
-                #     print(old_values,values)
-                #     # print("bellman", values[initial_state])
-                #     self.prev_action = action
-                #     optimal_policy[initial_state] = self.prev_action
-
-                # for s in self.STATES:
-                #     print("%s value: %f" % (s, values[s]))
-                # if old_values == values:
-                #     convergence = True
         return optimal_policy
 
 
