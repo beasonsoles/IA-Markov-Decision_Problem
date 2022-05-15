@@ -1,5 +1,6 @@
 """Main module docstring"""
 import pandas
+import numpy
 
 # ------------- reset the size of the terminal -------------
 pandas.options.display.max_columns = None
@@ -22,11 +23,12 @@ class MDP:
         self.states_with_direction = {}
         # probabilities will be a matrix that stores all the probabilities
         self.probabilities = []
+
         self.optimal_policy = {}
 
     # ------------- methods -------------
     @staticmethod
-    def simplify_data(self, line):
+    def simplify_data(line):
         """Function that keeps the first letter of the characters in the entered row.
         Thus, we ease working with the data. It returns two strings: a string with the initial state
         and the action, and another string with the final state"""
@@ -68,17 +70,21 @@ class MDP:
         self.states.sort()
         self.actions.sort()
 
-    # loop to create the keys of the states_with_direction dictionary and assign it a counter of 0
-    # these keys will have the form: levellevellevel-action
-    def create_states_with_direction(self):
-        for state in self.states:
-            for action in self.actions:
-                self.states_with_direction[state + "-" + action] = 0
+    def fill_probability_matrix(self):
         # fill the probability matrix with 0
         for row in range(len(self.states_with_direction)):
             self.probabilities.append([])
             for col in range(len(self.states)):
                 self.probabilities[row].append(0)
+
+    # loop to create the keys of the states_with_direction dictionary and assign it a counter of 0
+    # these keys will have the form: levellevellevel-action
+    def create_states_with_direction(self):
+        self.generate_states()
+        for state in self.states:
+            for action in self.actions:
+                self.states_with_direction[state + "-" + action] = 0
+        self.fill_probability_matrix()
         # store the states and direction in a list
         states_and_dir = list(self.states_with_direction.keys())
         return states_and_dir
@@ -134,7 +140,6 @@ class MDP:
         return value
 
     def value_iteration(self):
-        self.generate_states()
         pct = self.calculate_probabilities()
         values = {state: 0 for state in self.states}
         old_values = {}
