@@ -18,13 +18,10 @@ class MDP:
         self.TRAFFIC_LEVELS = ["H", "L"]
         self.ACTIONS = ["E", "N", "W"]
         self.STATES = ["HHH", "HHL", "HLH", "HLL", "LHH", "LHL", "LLH", "LLL"]
-        # generate the states
-        # STATES = []
         self.states_with_direction = {}
         # probabilities will be a matrix that stores all the probabilities
         self.probabilities = []
-        # self.prev_action = {}
-        # self.data_actions = []
+        self.prev_action = {}
 
     # ------------- functions -------------
     def get_unique_lines(self):
@@ -47,7 +44,6 @@ class MDP:
                 elif column == "Low":
                     initial_state_and_action += "L"
                 else:
-                    # self.data_actions.append(column)
                     initial_state_and_action += "-" + column
                     action_found = True
             else:
@@ -56,19 +52,6 @@ class MDP:
                 elif column == "Low":
                     final_state += "L"
         return initial_state_and_action, final_state
-
-    def generate_states(self, l):  # RECURSION FUNCTION FOR THE FOR LOOPS
-        print("Finish this")
-        # we fill the STATES list based on the constants NUMBER_OF_ROADS and TRAFFIC_LEVELS,
-        # so that the program is more generic
-        # for i in range(len(TRAFFIC_LEVELS) ^ NUMBER_OF_ROADS):
-        #     # in this case, 2 traffic levels (H, L) to the power of 3 roads
-        #     state = generate_states(STATES)
-        #     for road in range(NUMBER_OF_ROADS):
-        #         for level in TRAFFIC_LEVELS:
-        #             state += level
-        #     STATES.append(state)
-        # print(STATES)
 
     # loop to create the keys of the states_with_direction dictionary and assign it a counter of 0
     # these keys will have the form: levellevellevel-action
@@ -84,6 +67,7 @@ class MDP:
         # store the states and direction in a list
         states_and_dir = list(self.states_with_direction.keys())
         return states_and_dir
+
     # def count_occurrences(self):
     #     extract first part of calculate_probabilities
 
@@ -112,65 +96,47 @@ class MDP:
                     self.probabilities[row][column] = probability
                 except ZeroDivisionError:
                     self.probabilities[row][column] = 0
-            # print("ihs", sum(self.probabilities[row]) == 1)
         pct = pandas.DataFrame(self.probabilities, index=states_and_dir, columns=self.STATES)
-        # print(pct)
         return pct
 
-    def cost(self, n_action):
+    def cost(self, state, n_action):
         try:
-            if n_action == self.prev_action or self.prev_action is None:
+            if n_action == self.prev_action[state]:
                 return 1
-            elif n_action != self.prev_action:
+            elif n_action != self.prev_action[state]:
                 return 2
-        except IndexError:
-            return 0
+        except KeyError:
+            return 1
 
     def bellman_equation(self, init_state, action, old_values, pct):
-        # print("old value", old_values.get(self.STATES["HHH"]))
-        # optimal_action = {action: 0 for action in self.ACTIONS}
-        # optimal_action[action] = self.cost(action)
-        value = self.cost(action)
+        value = self.cost(init_state, action)
         count = 0
         for next_state in self.STATES:
             state = init_state + "-" + action
             count += pct.loc[state, next_state]
             value += pct.loc[state, next_state] * old_values[next_state]
-        if init_state == 'HHH':
-            print("value", value)
-        # if (action == 'W' or action == 'E') and init_state == 'HHH':
-            # print(old_values)
-            # print('uwu', action, value)
-        # print(init_state, action, "OK", count == 1)
         return value
 
     def value_iteration(self):
         pct = self.calculate_probabilities()
-        action = ""
         values = {state: 0 for state in self.STATES}
-        optimal_policy = {state: "" for state in self.STATES}
         old_values = {}
         while old_values != values:
             for i in values.keys():
                 old_values[i] = values[i]
             for state in self.STATES:
-                self.prev_action = None
-                optimal_action = {}
                 minimum = float('inf')
                 for action in self.ACTIONS:
-                    bellman = self.bellman_equation(state, action, old_values, pct)
-                    if bellman < minimum:
-                        minimum = bellman
-                        optimal_action[action] = minimum
-                        self.prev_action = action
+                    bellman_result = self.bellman_equation(state, action, old_values, pct)
+                    if bellman_result < minimum:
+                        minimum = bellman_result
+                        self.prev_action[state] = action
                 values[state] = minimum
-                action_index = list(optimal_action.values()).index(values[state])
-                action = list(optimal_action.keys())[action_index]
-                optimal_policy[state] = self.prev_action
-        return optimal_policy
+        return self.prev_action
 
 
 mdp = MDP("Data.csv")
-result = mdp.value_iteration()
-# optimal_policy = pandas.DataFrame(result, index=mdp.STATES)
-print("optimal policy", list(result.values()))
+optimal_policy = mdp.value_iteration()
+print("OPTIMAL POLICY:")
+for key in optimal_policy.keys():
+    print(key, "--->", optimal_policy[key])
